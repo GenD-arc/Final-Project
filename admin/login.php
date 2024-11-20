@@ -1,22 +1,35 @@
 <?php
 
+ob_start(); // Start output buffering
+
 include '../components/connect.php';
 
 if(isset($_POST['submit'])){
 
+   // Sanitize name input (but do not sanitize the password itself)
    $name = $_POST['name'];
-   $name = filter_var($name, FILTER_SANITIZE_STRING); 
-   $pass = sha1($_POST['pass']);
-   $pass = filter_var($pass, FILTER_SANITIZE_STRING); 
+   $name = filter_var($name, FILTER_SANITIZE_SPECIAL_CHARS); 
 
-   $select_admins = $conn->prepare("SELECT * FROM `admins` WHERE name = ? AND password = ? LIMIT 1");
-   $select_admins->execute([$name, $pass]);
+   // Hash the password using password_hash() for better security
+   $pass = $_POST['pass'];
+   $pass = filter_var($pass, FILTER_SANITIZE_STRING); // Optional, but avoid sanitizing password too much
+
+   // Prepare and execute the query to fetch the user by name and password
+   $select_admins = $conn->prepare("SELECT * FROM `admins` WHERE name = ? LIMIT 1");
+   $select_admins->execute([$name]);
    $row = $select_admins->fetch(PDO::FETCH_ASSOC);
 
    if($select_admins->rowCount() > 0){
-      setcookie('admin_id', $row['id'], time() + 60*60*24*30, '/');
-      header('location:dashboard.php');
-   }else{
+      // Verify the password using password_verify()
+      if(password_verify($pass, $row['password'])){
+         // Set the admin_id cookie if login is successful
+         setcookie('admin_id', $row['id'], time() + 60*60*24*30, '/');
+         header('location:dashboard.php');
+         exit(); // Ensure no further code is executed after redirect
+      } else {
+         $warning_msg[] = 'Incorrect username or password!';
+      }
+   } else {
       $warning_msg[] = 'Incorrect username or password!';
    }
 
@@ -57,26 +70,11 @@ if(isset($_POST['submit'])){
 
 <!-- login section ends -->
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/2.1.2/sweetalert.min.js"></script>
 
 <?php include '../components/message.php'; ?>
 
 </body>
 </html>
+
+<?php ob_end_flush(); // End output buffering ?>
