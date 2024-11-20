@@ -126,7 +126,7 @@ if(isset($_POST['send'])){
 </head>
 <body>
 
-<?php include 'admin/login.php'; ?>
+<?php include 'components/user_header.php'; ?>
 
 <!-- home section starts  -->
 
